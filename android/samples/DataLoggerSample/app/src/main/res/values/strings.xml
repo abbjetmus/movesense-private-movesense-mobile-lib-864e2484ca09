@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Movesense DataLogger Sample</string>
+    <string name="title_activity_datalogger">DataLogger Activity</string>
+    <string name="instructions_text">This app demonstrates the use of DataLogger and Logbook APIs on Movesense sensor. First scan for BLE devices and then connect to it by clicking it on the list. After connection in established, DataLogger view will open.</string>
+    <string name="datalogger_state">DataLogger state:</string>
+    <string name="help_text_datalogger">In this view you can start and stop logging of resource (/Meas/Acc/13), list Logbook entries and by clicking an entry, get the log content as JSON.</string>
+    <string name="start_logging">Start Logging</string>
+    <string name="stop_logging">Stop Logging</string>
+    <string name="refresh_logbook_list">Refresh logbook list</string>
+    <string-array name="datalogger_paths">
+        <item>Select path ...</item>
+        <item>/Meas/Acc/104</item>
+        <item>/Meas/IMU9/104</item>
+        <item>/Meas/ECG/250</item>
+        <item>/Meas/HR</item>
+        <item>/Algo/ECGRR</item>
+    </string-array>
+</resources>

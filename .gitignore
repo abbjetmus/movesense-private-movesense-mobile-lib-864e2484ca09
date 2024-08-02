@@ -1,0 +1,20 @@
+# IntelliJ
+.idea
+*.iml
+
+# Android Studio
+local.properties
+.gradle
+.externalNativeBuild
+test.txt
+
+# Build Artifacts
+build
+gen
+out
+
+# Mac
+.DS_Store
+
+IOS/MovesenseShowcase/fastlane/.env.default
+IOS/MovesenseShowcase/fastlane/report.xml

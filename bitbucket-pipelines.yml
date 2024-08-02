@@ -1,0 +1,55 @@
+# This is an example Starter pipeline configuration
+# Use a skeleton to build, test and deploy using manual and parallel steps
+# -----
+# You can specify a custom docker image from Docker Hub as your build environment.
+
+image: atlassian/default-image:3
+
+clone:
+  depth: 1 # or some other number of commits.
+
+pipelines:
+  custom: # Pipelines that can only be triggered manually
+    trigger-release:
+      - variables:
+          - name: MOBILE_LIB_ARTIFACT_PATH
+            default: "amersports-release-local/com/suunto/sds/movesense/3.15.0/movesense-3.15.0.zip"
+          - name: RELEASE_TAG
+      - step:
+          name: 'Fetch artifact for release branch'
+          script:
+            - mkdir -p package
+            - cd package
+            - echo "ARTIFACTORY_URL ${ARTIFACTORY_URL}"
+            - curl -L -u "${JFROG_USERNAME}:${JFROG_ACCESS_TOKEN}" "${ARTIFACTORY_URL}${MOBILE_LIB_ARTIFACT_PATH}" --output downloaded_mds.zip
+            - unzip *.zip
+            - cd ..
+            # delete old binaries
+            - rm -rf android/Movesense/*
+            - rm -rf IOS/Movesense/include/*
+            - rm -rf IOS/Movesense/Release-iphoneos/*
+            # Move new binaries to their place
+            - mv package/android/*.aar "android/Movesense/" 
+            - mv package/ios/*.h "IOS/Movesense/include/"
+            - mv package/ios/*.a "IOS/Movesense/Release-iphoneos/"
+            # Add release entry template to CHANGES.md
+            - 'echo "## Version $RELEASE_TAG ##" > newChanges'
+            - echo >> newChanges
+            - 'echo "### Whats new: ###" >> newChanges'
+            - echo "- TBD" >> newChanges
+            - echo >> newChanges
+            - 'echo "### Known Bugs: ###" >> newChanges'
+            - echo "- TBD" >> newChanges
+            - echo >> newChanges
+            - 'echo "### Notes: ###" >> newChanges'
+            - echo >> newChanges
+            - cat CHANGES.md >> newChanges
+            - cat newChanges > CHANGES.md
+            # Commit and Push release
+            - git fetch --unshallow
+            - git checkout -b release_$RELEASE_TAG
+            - git add IOS/*
+            - git add android/*
+            - git add CHANGES.md
+            - git commit -m "Update package to $RELEASE_TAG"
+            - git push origin release_$RELEASE_TAG -f

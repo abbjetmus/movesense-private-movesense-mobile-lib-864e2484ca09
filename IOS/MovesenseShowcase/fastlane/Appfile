@@ -1,0 +1,8 @@
+app_identifier("com.movesense.showcase") # The bundle identifier of your app
+apple_id("ios-developers@movesense.com") # Your Apple email address
+
+itc_team_id(ENV["APP_ITC_TEAM_ID"]) # App Store Connect Team ID
+team_id(ENV["APP_TEAM_ID"]) # Developer Portal Team ID
+
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile

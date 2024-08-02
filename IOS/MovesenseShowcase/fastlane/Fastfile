@@ -1,0 +1,75 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    setup_circle_ci
+  end
+
+  desc "Build and run tests"
+  lane :build_and_test do
+    cocoapods
+
+    build_app(
+      workspace: "MovesenseShowcase.xcworkspace",
+      scheme: "MovesenseShowcase",
+      configuration: "Debug",
+      output_name: "Movesense_ShowcaseApp.ipa",
+      export_method: "development",
+      skip_archive: true)
+    # clean build again for testing
+    run_tests(scheme: "MovesenseShowcaseTests", clean: true, build_for_testing: true)
+  end
+
+  desc "Push a new beta build to TestFlight"
+  lane :beta do
+    app_store_connect_api_key(is_key_content_base64: true) # Use key from env variables
+    build_app(workspace: "MovesenseShowcase.xcworkspace", scheme: "MovesenseShowcase")
+    upload_to_testflight
+  end
+
+  # CERTIFICATE STUFF from: https://medium.com/revelo-tech/setting-up-automatic-ios-release-with-fastlane-and-match-on-ci-cd-server-16c3f1d79bc5
+  desc "Get certificates"
+  lane :certificates do
+    sync_code_signing(
+      type: "development",
+      app_identifier: ['com.movesense.showcase', 'com.movesense.showcase'],
+      force_for_new_devices: true,
+      readonly: true
+    )
+
+    # You can repeate the sync_code_signing with other types of certificates such as appstore and adhoc
+    sync_code_signing(
+      type: "appstore",
+      app_identifier: 'com.movesense.showcase',
+      readonly: true
+    )
+  end
+
+  desc "Generate new certificates"
+  lane :generate_new_certificates do
+    sync_code_signing(
+      type: "development",
+      app_identifier: ['com.movesense.showcase', 'com.movesense.showcase'],
+      force_for_new_devices: true,
+      readonly: false
+    )
+    
+    # You can repeate the sync_code_signing with other types of certificates such as appstore and adhoc
+
+  end
+end

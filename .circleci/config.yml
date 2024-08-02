@@ -1,0 +1,116 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+orbs:
+  git-shallow-clone: guitarrapc/git-shallow-clone@2.6.0
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
+jobs:
+  build-apps-android:
+    docker:
+      - image: cimg/android:2023.11.1
+    resource_class: medium
+    environment:
+      JVM_OPTS: -Xmx2048m
+    steps:
+      # - add_ssh_keys:
+      #     fingerprints:
+      #       - "07:ad:85:eb:85:91:7e:b8:9c:19:d3:07:d4:95:62:e1"
+
+      # faster than "checkout"
+      - git-shallow-clone/checkout:
+          fetch_depth: 1
+
+      - restore_cache:
+          key: jars-{{ checksum "~/project/android/samples/ConnectivityAPISample/build.gradle" }}-{{ checksum  "~/project/android/samples/ConnectivityAPISample/app/build.gradle" }}
+
+      - run:
+         name: Chmod permissions #if permission for Gradlew Dependencies fail, use this.
+         command: sudo chmod +x `find ~/project/android/ -name "gradlew"`
+
+      - run:
+          name: Prep keystore config
+          command: |
+            mkdir -p ~/.gradle
+            echo $ANDROID_APP_KEYSTORE | base64 --decode > ~/keystore.jks
+            echo RELEASE_STORE_FILE=~/keystore.jks > ~/.gradle/gradle.properties
+            echo RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD >> ~/.gradle/gradle.properties
+            echo RELEASE_KEY_ALIAS=key0 >> ~/.gradle/gradle.properties
+            echo RELEASE_KEY_PASSWORD=$KEYSTORE_PASSWORD >> ~/.gradle/gradle.properties
+
+      - run:
+          name: Build Debug APKs
+          command: |
+            cd ~/project/android/samples/ConnectivityAPISample && ./gradlew :app:assembleDebug
+            cd ~/project/android/samples/DataLoggerSample && ./gradlew :app:assembleDebug
+            cd ~/project/android/samples/ECGSample && ./gradlew :app:assembleDebug
+            cd ~/project/android/samples/SensorSample && ./gradlew :app:assembleDebug
+            cd ~/project/android/Showcaseapp && ./gradlew assembleDebug
+
+      - run:
+          name: Build Signed Release APKs
+          command: |
+            cd ~/project/android/samples/ConnectivityAPISample && ./gradlew :app:assembleRelease
+            cd ~/project/android/samples/DataLoggerSample && ./gradlew :app:assembleRelease
+            cd ~/project/android/samples/ECGSample && ./gradlew :app:assembleRelease
+            cd ~/project/android/samples/SensorSample && ./gradlew :app:assembleRelease
+            cd ~/project/android/Showcaseapp && ./gradlew assembleRelease
+
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: jars-{{ checksum "~/project/android/samples/ConnectivityAPISample/build.gradle" }}-{{ checksum  "~/project/android/samples/ConnectivityAPISample/app/build.gradle" }}
+
+      - run:
+          name: Collect APKs
+          command: |
+            mkdir -p ~/APKs
+            cp `find ~/project/android/ -name "*.apk"` ~/APKs
+
+      - store_artifacts: # for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: ~/APKs
+          destination: Installers
+
+      # - persist_to_workspace:
+      #     root: ~/project/Android/ConnectivityTesterApp/app/build/outputs
+      #     paths:
+      #         - apk
+  build-apps-ios:
+    macos:
+      xcode: 14.3.1 # indicate your selected version of Xcode
+    resource_class: macos.x86.medium.gen2
+    steps:
+      # Add cert repo deploy key to be able to access certificates -repo
+      - add_ssh_keys:
+          fingerprints:
+            - "aa:8b:4f:11:cc:6f:54:e4:17:da:88:c8:3e:80:94:f7"
+
+      # faster than "checkout"
+      # - git-shallow-clone/checkout:
+      #     fetch_depth: 1
+      - checkout
+
+      - run:
+          name: Build and Test ShowcaseApp
+          command: |
+            cd IOS/MovesenseShowcase
+            bundle install
+            export GIT_SSH_COMMAND='ssh -i ~/.ssh/id_rsa_aa8b4f11cc6f54e417da88c83e8094f7 -o IdentitiesOnly=yes'
+            bundle exec fastlane certificates
+            unset GIT_SSH_COMMAND
+            bundle exec fastlane build_and_test
+
+
+# Invoke jobs via workflows
+# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+workflows:
+  build:
+    jobs:
+      - build-apps-android:
+          context:
+            - AndroidApps
+      - build-apps-ios:
+          context:
+            - MatchCertificates
